@@ -14,7 +14,11 @@ RTCZero rtc;
 /* Change these values to set the current initial time */
 const byte seconds = 0;
 const byte minutes = 00;
-const byte hours = 17;
+const byte hours = 1;
+
+const byte UPDATE_INTERVAL_HOURS = 0;     // 0 - 23
+const byte UPDATE_INTERVAL_MINUTES = 0;   // 0 - 59
+const byte UPDATE_INTERVAL_SECONDS = 10;  // 0 - 59
 
 /* Change these values to set the current initial date */
 const byte day = 17;
@@ -35,13 +39,13 @@ boolean alarmMatched = false;
 
 Epd epd;
 
+DynamicJsonDocument doc(20000);
+
 int lastUpdateId = 0;
 
 String fetchMessage() {
   if(wifi.connectSSL("api.telegram.org", 443)) {
     Serial.println("client connected");
-
-//    int lastUpdateId = last_update_id.read();
 
     wifi.println("GET " + endpoint + "?offset=" + (lastUpdateId + 1));
     wifi.println("Content-Type: application/json");
@@ -65,8 +69,6 @@ String fetchMessage() {
         char c = wifi.read();
         response += c;
       }
-  
-      DynamicJsonDocument doc(5000);
 
        // Deserialize the JSON document
       DeserializationError error = deserializeJson(doc, response);
@@ -92,9 +94,7 @@ String fetchMessage() {
     Serial.print("Fetched message update_id");
     Serial.println(updateId);
 
-//    last_update_id.write(updateId);
     lastUpdateId = updateId;
-    
     String message = lastMessage["text"].as<String>();
     wifi.stop();
     return message;
@@ -122,7 +122,11 @@ void setup() {
   rtc.setTime(hours, minutes, seconds);
   rtc.setDate(day, month, year);
 
-  rtc.setAlarmTime(17, 00, 10);
+  rtc.setAlarmTime(
+      hours + UPDATE_INTERVAL_HOURS, 
+      minutes + UPDATE_INTERVAL_MINUTES, 
+      seconds + UPDATE_INTERVAL_SECONDS
+    );
   rtc.enableAlarm(rtc.MATCH_HHMMSS);
 
   rtc.attachInterrupt(alarmMatch);
@@ -135,38 +139,6 @@ void loop() {
     Serial.println("MATCHED");
     alarmMatched = false;
 
-    //
-//    unsigned char image[1500];
-//      int batt = analogRead(A0);
-//      String b = String(batt);
-//      char *bb = const_cast<char*>(b.c_str());
-//
-//epd.Reset();
-//      if (epd.Init() != 0) {
-//        return;
-//      }
-//      
-//      
-//      Serial.println("DISPLAY UPDATE");
-//      epd.ClearFrame();
-//      
-//       Paint paint(image, 400, 28);    //width should be the multiple of 8 
-//
-//        paint.Clear(UNCOLORED);
-//        paint.DrawStringAt(0, 3, bb, &Font24, COLORED);
-//        epd.SetPartialWindow(paint.GetImage(), 0, 0, paint.GetWidth(), paint.GetHeight());
-//        epd.DisplayFrame();
-//      epd.Sleep();
-//       rtc.setTime(hours, minutes, seconds);
-//
-//    rtc.setAlarmTime(17, 00, 10);
-//    rtc.enableAlarm(rtc.MATCH_HHMMSS);
-//
-//    rtc.attachInterrupt(alarmMatch);
-//    rtc.standbyMode();
-//      return;
-    //
-
     while(status != WL_CONNECTED) {
         Serial.print("Attempting Wifi Connection to ");
         Serial.println(ssid);
@@ -174,7 +146,8 @@ void loop() {
     }
 
     String message = fetchMessage();
-
+    Serial.print("returned");
+    Serial.println(message);
     status = WL_DISCONNECTED;
     WiFi.end();
 
@@ -199,20 +172,20 @@ void loop() {
         bool smallFont = false;
         bool mediumFont = false;
         int height = 28;
-        if(startsWith("/s", ptr)) {
-          ptr += 2;
+        if(startsWith("[s]", ptr)) {
+          ptr += 3;
           smallFont = true;
           height = 20;
-        } else if(startsWith("/m", ptr)) {
-          ptr += 2;
+        } else if(startsWith("[m]", ptr)) {
+          ptr += 3;
           mediumFont = true;
           height = 24;
         }
 
         int bg = UNCOLORED;
         int color = COLORED;
-        if(startsWith("/inv", ptr)) {
-          ptr += 4;
+        if(startsWith("[inv]", ptr)) {
+          ptr += 5;
           bg = COLORED;
           color = UNCOLORED;
         }
@@ -242,7 +215,11 @@ void loop() {
   
     rtc.setTime(hours, minutes, seconds);
 
-    rtc.setAlarmTime(17, 00, 10);
+    rtc.setAlarmTime(
+      hours + UPDATE_INTERVAL_HOURS, 
+      minutes + UPDATE_INTERVAL_MINUTES, 
+      seconds + UPDATE_INTERVAL_SECONDS
+    );
     rtc.enableAlarm(rtc.MATCH_HHMMSS);
 
     rtc.attachInterrupt(alarmMatch);
