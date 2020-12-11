@@ -28,8 +28,8 @@ const byte year = 15;
 // wifi info
 //char ssid[] = "AndroidAPA41C";
 //char password[] = "passwort123";
-char ssid[] = "Vodafone-2F2C";
-char password[] = "Pilsator.58";
+char ssid[] = "";
+char password[] = "";
 WiFiClient wifi;
 int status = WL_IDLE_STATUS;
 
